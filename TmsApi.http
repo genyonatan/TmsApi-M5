@@ -1,0 +1,11 @@
+@TmsApi_HostAddress = http://localhost:5002
+
+GET {{TmsApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+### Anonymous request - should return 401
+GET {{TmsApi_HostAddress}}/api/assessments/results
+
+### Authenticated training request - should return 200
+GET {{TmsApi_HostAddress}}/api/assessments/results
+X-Training-User: Yonat
