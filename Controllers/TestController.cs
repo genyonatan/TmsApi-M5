@@ -1,6 +1,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 using TmsApi.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace TmsApi.Controllers;
 
@@ -76,6 +77,86 @@ public class TestController : ControllerBase
                 Message = ex.Message
             });
         }
+    }
+
+
+    [HttpGet("active-high-gpa-count")]
+    public async Task<IActionResult> GetActiveHighGpaCount()
+    {
+        var count = await _context.Students
+            .Where(student =>
+                student.IsActive &&
+                student.GPA >= 3.0m)
+            .CountAsync();
+
+        return Ok(new
+        {
+            ActiveHighGpaStudentCount = count
+        });
+    }
+
+    [HttpGet("courses-by-enrollment-count")]
+    public async Task<IActionResult> GetCoursesByEnrollmentCount()
+    {
+        var courses = await _context.Courses
+            .Select(course => new
+            {
+                course.Title,
+                EnrollmentCount = course.Enrollments.Count
+            })
+            .OrderByDescending(course => course.EnrollmentCount)
+            .ToListAsync();
+
+        return Ok(courses);
+    }
+
+    [HttpGet("average-gpa-per-course")]
+    public async Task<IActionResult> GetAverageGpaPerCourse()
+    {
+        var averages = await _context.Enrollments
+            .GroupBy(enrollment => enrollment.Course.Title)
+            .Select(group => new
+            {
+                Course = group.Key,
+                AverageGPA = group.Average(
+                    enrollment => enrollment.Student.GPA
+                )
+            })
+            .ToListAsync();
+
+        return Ok(averages);
+    }
+
+    [HttpGet("students-without-enrollments")]
+    public async Task<IActionResult> GetStudentsWithoutEnrollments()
+    {
+        var students = await _context.Students
+            .Where(student => !student.Enrollments.Any())
+            .Select(student => student.Name)
+            .ToListAsync();
+
+        return Ok(students);
+    }
+
+    [HttpGet("students-without-enrollments-left-join")]
+    public async Task<IActionResult> GetStudentsWithoutEnrollmentsLeftJoin()
+    {
+        var students = await _context.Students
+            .LeftJoin(
+                _context.Enrollments,
+                student => student.Id,
+                enrollment => enrollment.StudentId,
+                (student, enrollment) => new
+                {
+                    Student = student,
+                    Enrollment = enrollment
+                }
+            )
+            .Where(result => result.Enrollment == null)
+            .Select(result => result.Student.Name)
+            .ToListAsync();
+
+        return Ok(students);
     }
 
 }
