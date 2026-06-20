@@ -5,6 +5,7 @@ namespace TmsApi.Data;
 
 public class TmsDbContext : DbContext
 {
+
     public TmsDbContext(DbContextOptions<TmsDbContext> options)
         : base(options)
     {
@@ -15,4 +16,8 @@ public class TmsDbContext : DbContext
     public DbSet<Course> Courses => Set<Course>();
 
     public DbSet<Enrollment> Enrollments => Set<Enrollment>();
+
+    public DbSet<Assessment> Assessments => Set<Assessment>();
+
+    public DbSet<Certificate> Certificates => Set<Certificate>();
 }
