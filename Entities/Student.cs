@@ -12,6 +12,7 @@ public class Student
 
     public bool IsActive { get; set; } = true;
     public uint Version { get; set; }
+    public bool IsDeleted { get; set; }
 
     public ICollection<Enrollment> Enrollments { get; set; }
         = new List<Enrollment>();

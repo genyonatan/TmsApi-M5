@@ -32,5 +32,11 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
         
         builder.Property(student => student.Version)
             .IsRowVersion();
+
+        builder.Property(student => student.IsDeleted)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.HasQueryFilter(student => !student.IsDeleted);
     }
 }

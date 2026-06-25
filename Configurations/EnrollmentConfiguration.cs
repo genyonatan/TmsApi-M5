@@ -34,5 +34,10 @@ public class EnrollmentConfiguration
             .HasForeignKey(enrollment => enrollment.CourseId)
             // Prevent accidental deletion of a course that still has enrollment records.
             .OnDelete(DeleteBehavior.Restrict);
-            }
+
+        builder.Property(enrollment => enrollment.IsArchived)
+            .IsRequired()
+            .HasDefaultValue(false);
+            
+        }
 }

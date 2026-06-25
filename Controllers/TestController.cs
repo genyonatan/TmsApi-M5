@@ -373,5 +373,97 @@ public class TestController : ControllerBase
         }
     }
 
+    [HttpGet("students-normal")]
+    public async Task<IActionResult> GetNormalStudents(
+        CancellationToken cancellationToken)
+    {
+        var students = await _context.Students
+            .AsNoTracking()
+            .Select(student => new
+            {
+                student.Id,
+                student.Name,
+                student.IsDeleted
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(students);
+    }
+
+    [HttpGet("students-admin")]
+    public async Task<IActionResult> GetAllStudentsForAdmin(
+        CancellationToken cancellationToken)
+    {
+        var students = await _context.Students
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Select(student => new
+            {
+                student.Id,
+                student.Name,
+                student.IsDeleted
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(students);
+    }
+
+    [HttpPut("students/{id}/soft-delete")]
+    public async Task<IActionResult> SoftDeleteStudent(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        var student = await _context.Students
+            .IgnoreQueryFilters()
+            .SingleOrDefaultAsync(
+                student => student.Id == id,
+                cancellationToken
+            );
+
+        if (student is null)
+        {
+            return NotFound();
+        }
+
+        student.IsDeleted = true;
+
+        _context.Entry(student)
+            .Property("LastUpdated")
+            .CurrentValue = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return Ok(new
+        {
+            Message = $"Student {id} was soft deleted."
+        });
+    }
+
+    [HttpPut("enrollments/archive")]
+    public async Task<IActionResult> ArchiveOldEnrollments(
+        [FromQuery] DateTimeOffset cutoff,
+        CancellationToken cancellationToken)
+    {
+        var cutoffUtc = cutoff.UtcDateTime;
+
+        var affectedRows = await _context.Enrollments
+            .Where(enrollment =>
+                enrollment.EnrolledAt < cutoffUtc &&
+                !enrollment.IsArchived)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(
+                    enrollment => enrollment.IsArchived,
+                    true
+                ),
+                cancellationToken
+            );
+
+        return Ok(new
+        {
+            ArchivedEnrollmentCount = affectedRows,
+            Cutoff = cutoffUtc
+        });
+    }
+
 
 }

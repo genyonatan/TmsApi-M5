@@ -15,4 +15,8 @@ public class Enrollment
     public Student Student { get; set; } = null!;
 
     public Course Course { get; set; } = null!;
+    
+    public bool IsArchived { get; set; }
+
+
 }
