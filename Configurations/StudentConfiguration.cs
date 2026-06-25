@@ -29,5 +29,8 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
 
         builder.Property<DateTime>("LastUpdated")
             .IsRequired();
+        
+        builder.Property(student => student.Version)
+            .IsRowVersion();
     }
 }
