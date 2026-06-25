@@ -159,4 +159,52 @@ public class TestController : ControllerBase
         return Ok(students);
     }
 
+    [HttpGet("students-page")]
+public async Task<IActionResult> GetStudentsPage(
+    int page = 1,
+    CancellationToken cancellationToken = default)
+{
+    const int pageSize = 20;
+
+    if (page < 1)
+    {
+        return BadRequest(new
+        {
+            Message = "Page number must be at least 1."
+        });
+    }
+
+    var students = await _context.Students
+        .OrderBy(student => student.Name)
+        .ThenBy(student => student.Id)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .ToListAsync(cancellationToken);
+
+    return Ok(new
+    {
+        Page = page,
+        PageSize = pageSize,
+        Students = students
+    });
+}
+
+[HttpGet("top-five-courses")]
+public async Task<IActionResult> GetTopFiveCourses(
+    CancellationToken cancellationToken = default)
+{
+    var courses = await _context.Enrollments
+        .GroupBy(enrollment => enrollment.Course.Title)
+        .Select(group => new
+        {
+            CourseTitle = group.Key,
+            EnrollmentCount = group.Count()
+        })
+        .OrderByDescending(course => course.EnrollmentCount)
+        .Take(5)
+        .ToListAsync(cancellationToken);
+
+    return Ok(courses);
+}
+
 }
