@@ -299,5 +299,79 @@ public class TestController : ControllerBase
         });
     }
 
+    [HttpPut("students/{id}/concurrency-test")]
+    public async Task<IActionResult> TestConcurrency(
+        int id,
+        [FromServices] IServiceScopeFactory scopeFactory,
+        CancellationToken cancellationToken)
+    {
+        // Simulate Staff Member A using one DbContext.
+        using var scopeA = scopeFactory.CreateScope();
+
+        var contextA = scopeA.ServiceProvider
+            .GetRequiredService<TmsDbContext>();
+
+        // Simulate Staff Member B using a separate DbContext.
+        using var scopeB = scopeFactory.CreateScope();
+
+        var contextB = scopeB.ServiceProvider
+            .GetRequiredService<TmsDbContext>();
+
+        // Both staff members load the same original database row.
+        var studentA = await contextA.Students
+            .SingleOrDefaultAsync(
+                student => student.Id == id,
+                cancellationToken
+            );
+
+        var studentB = await contextB.Students
+            .SingleOrDefaultAsync(
+                student => student.Id == id,
+                cancellationToken
+            );
+
+        if (studentA is null || studentB is null)
+        {
+            return NotFound(new
+            {
+                Message = $"Student {id} was not found."
+            });
+        }
+
+        // Staff Member A changes the student's name and saves first.
+        studentA.Name = studentA.Name + " - Updated by A";
+
+        contextA.Entry(studentA)
+            .Property("LastUpdated")
+            .CurrentValue = DateTime.UtcNow;
+
+        await contextA.SaveChangesAsync(cancellationToken);
+
+        // Staff Member B still has the older Version value.
+        studentB.GPA = Math.Min(4.0m, studentB.GPA + 0.1m);
+
+        contextB.Entry(studentB)
+            .Property("LastUpdated")
+            .CurrentValue = DateTime.UtcNow;
+
+        try
+        {
+            await contextB.SaveChangesAsync(cancellationToken);
+
+            return Ok(new
+            {
+                Message = "Both updates succeeded. Concurrency protection did not trigger."
+            });
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Concurrency conflict detected. Another user changed this student before the second update was saved."
+            });
+        }
+    }
+
 
 }
