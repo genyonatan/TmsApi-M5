@@ -20,4 +20,11 @@ public class TmsDbContext : DbContext
     public DbSet<Assessment> Assessments => Set<Assessment>();
 
     public DbSet<Certificate> Certificates => Set<Certificate>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(
+            typeof(TmsDbContext).Assembly
+        );
+    }
 }
