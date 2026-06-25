@@ -26,5 +26,8 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
 
         builder.Property(student => student.IsActive)
             .IsRequired();
+
+        builder.Property<DateTime>("LastUpdated")
+            .IsRequired();
     }
 }

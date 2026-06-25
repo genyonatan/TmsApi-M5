@@ -263,5 +263,41 @@ public class TestController : ControllerBase
         return Ok(report);
     }
 
+    [HttpPut("students/{id}/audit-test")]
+    public async Task<IActionResult> TestAuditUpdate(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        var student = await _context.Students
+            .SingleOrDefaultAsync(
+                student => student.Id == id,
+                cancellationToken
+            );
+
+        if (student is null)
+        {
+            return NotFound();
+        }
+
+        student.Name = student.Name + " Updated";
+
+        _context.Entry(student)
+            .Property("LastUpdated")
+            .CurrentValue = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        var lastUpdated = _context.Entry(student)
+            .Property<DateTime>("LastUpdated")
+            .CurrentValue;
+
+        return Ok(new
+        {
+            student.Id,
+            student.Name,
+            LastUpdated = lastUpdated
+        });
+    }
+
 
 }
