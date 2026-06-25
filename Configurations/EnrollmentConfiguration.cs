@@ -25,10 +25,14 @@ public class EnrollmentConfiguration
 
         builder.HasOne(enrollment => enrollment.Student)
             .WithMany(student => student.Enrollments)
-            .HasForeignKey(enrollment => enrollment.StudentId);
+            .HasForeignKey(enrollment => enrollment.StudentId)
+            // Prevent accidental deletion of a student who still has enrollment records.
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(enrollment => enrollment.Course)
             .WithMany(course => course.Enrollments)
-            .HasForeignKey(enrollment => enrollment.CourseId);
-    }
+            .HasForeignKey(enrollment => enrollment.CourseId)
+            // Prevent accidental deletion of a course that still has enrollment records.
+            .OnDelete(DeleteBehavior.Restrict);
+            }
 }
