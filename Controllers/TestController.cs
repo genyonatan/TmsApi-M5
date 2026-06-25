@@ -160,51 +160,108 @@ public class TestController : ControllerBase
     }
 
     [HttpGet("students-page")]
-public async Task<IActionResult> GetStudentsPage(
-    int page = 1,
-    CancellationToken cancellationToken = default)
-{
-    const int pageSize = 20;
-
-    if (page < 1)
+    public async Task<IActionResult> GetStudentsPage(
+        int page = 1,
+        CancellationToken cancellationToken = default)
     {
-        return BadRequest(new
+        const int pageSize = 20;
+
+        if (page < 1)
         {
-            Message = "Page number must be at least 1."
+            return BadRequest(new
+            {
+                Message = "Page number must be at least 1."
+            });
+        }
+
+        var students = await _context.Students
+            .OrderBy(student => student.Name)
+            .ThenBy(student => student.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return Ok(new
+        {
+            Page = page,
+            PageSize = pageSize,
+            Students = students
         });
     }
 
-    var students = await _context.Students
-        .OrderBy(student => student.Name)
-        .ThenBy(student => student.Id)
-        .Skip((page - 1) * pageSize)
-        .Take(pageSize)
-        .ToListAsync(cancellationToken);
-
-    return Ok(new
+    [HttpGet("top-five-courses")]
+    public async Task<IActionResult> GetTopFiveCourses(
+        CancellationToken cancellationToken = default)
     {
-        Page = page,
-        PageSize = pageSize,
-        Students = students
-    });
-}
+        var courses = await _context.Enrollments
+            .GroupBy(enrollment => enrollment.Course.Title)
+            .Select(group => new
+            {
+                CourseTitle = group.Key,
+                EnrollmentCount = group.Count()
+            })
+            .OrderByDescending(course => course.EnrollmentCount)
+            .Take(5)
+            .ToListAsync(cancellationToken);
 
-[HttpGet("top-five-courses")]
-public async Task<IActionResult> GetTopFiveCourses(
-    CancellationToken cancellationToken = default)
-{
-    var courses = await _context.Enrollments
-        .GroupBy(enrollment => enrollment.Course.Title)
-        .Select(group => new
+        return Ok(courses);
+    }
+
+    [HttpGet("n-plus-one")]
+    public async Task<IActionResult> TestNPlusOne(
+        CancellationToken cancellationToken)
+    {
+        var students = await _context.Students
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        var report = new List<object>();
+
+        foreach (var student in students)
         {
-            CourseTitle = group.Key,
-            EnrollmentCount = group.Count()
-        })
-        .OrderByDescending(course => course.EnrollmentCount)
-        .Take(5)
-        .ToListAsync(cancellationToken);
+            var enrollmentCount = await _context.Enrollments
+                .AsNoTracking()
+                .CountAsync(
+                    enrollment => enrollment.StudentId == student.Id,
+                    cancellationToken
+                );
 
-    return Ok(courses);
-}
+            Console.WriteLine(
+                $"{student.Name}: {enrollmentCount} enrollments"
+            );
+
+            report.Add(new
+            {
+                student.Name,
+                EnrollmentCount = enrollmentCount
+            });
+        }
+
+        return Ok(report);
+    }
+
+    [HttpGet("n-plus-one-fixed")]
+    public async Task<IActionResult> TestNPlusOneFixed(
+        CancellationToken cancellationToken)
+    {
+        var report = await _context.Students
+            .AsNoTracking()
+            .Select(student => new
+            {
+                student.Name,
+                EnrollmentCount = student.Enrollments.Count
+            })
+            .ToListAsync(cancellationToken);
+
+        foreach (var student in report)
+        {
+            Console.WriteLine(
+                $"{student.Name}: {student.EnrollmentCount} enrollments"
+            );
+        }
+
+        return Ok(report);
+    }
+
 
 }
